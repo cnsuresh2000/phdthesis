@@ -1,7 +1,8 @@
-#define NONLOSSY
-#define MESSAGE_COLLISION
-#define P1
-#define DESIGNERROR 1
+#define LOSSY 1
+#define P3
+/* Symbolic constant defining 11 states inserted in the model 
+per node, a total of 44 states for four Processes Node0 
+to Node4*/
 #define n0_s1 (Node0@n0_slot_begin)
 #define n0_s2 (Node0@n0_ts_msgorigin_rt)
 #define n0_s3 (Node0@n0_ts_msgorigin_nrt)
@@ -62,13 +63,15 @@
 #define MAXCHANNEL 2
 #define GROSSCYCLETIME 206
 #define TIMESLOT 1
+/* Constant defining the length of device schedule 
+constructed after applying Algorithm 1 to 4 */
 #define LDS0 9
 #define LDS1 13
 #define LDS2 7
 #define LDS3 5
+/* Defining the data type for the device schedule */
 typedef deviceSchedule
 {
-	
 	byte slotno;
 	byte channelno;
 	byte deviceid;
@@ -83,7 +86,8 @@ chan tdma_channel[MAXCHANNEL]=[10] of{mtype,byte,byte,byte,byte}
 #define set(tmr,value) tmr=value
 #define expire(tmr) (tmr<=0)
 #define tick(tmr) if ::(tmr>=0)->tmr=tmr-1::else fi
-int gltimer,lctimer0,timeslottimer0,lctimer1,timeslottimer1,lctimer2,timeslottimer2;
+int gltimer,lctimer0,timeslottimer0,lctimer1,timeslottimer1,
+lctimer2,timeslottimer2;
 int lctimer3,timeslottimer3;
 #ifdef MESSAGE_COLLISION
 int no_of_transmit=0;
@@ -109,13 +113,15 @@ do
  }		
 proctype Node0(byte node_id)
 {
-byte i,source,dest,sourceorigin,msg,state,channelno,msgretransmit,msg_recvd,msg_saved,sourceorigin_saved;
+byte i,source,dest,sourceorigin,msg,state,channelno,
+msgretransmit,msg_recvd,msg_saved,sourceorigin_saved;
 int temp1,temp2;
 bool retransmit;
+/* Steps 1 to 12 of Algorithm 5 for Node0*/
 begin_tdma:
 #ifdef DESIGNERROR
 progress0n0_cycle_begin:
-#endif	
+#endif
 atomic
 {
 set(gltimer,GROSSCYCLETIME);
@@ -127,6 +133,7 @@ ireset0=true;
        expire(gltimer);     
         goto begin_tdma;  
     ::(i<LDS0)->
+       /* Steps 4 to 12 of Algorithm 5 for Node0 */
        if
        ::(i==0)->
            atomic
@@ -153,38 +160,46 @@ ireset0=true;
        ::     
 		expire(lctimer0);
 		break;
-		od;		
+	od;
+
+n0_slot_begin:
 #ifdef DESIGNERROR
 progress0n0_slot_begin:
-#endif		
-n0_slot_begin:
+#endif
 #ifdef MESSAGE_COLLISION
 no_of_transmit=0;
 #endif
+/* Steps 1 to 9 of Algorithm 6 for Node 0 */
 if       
-       :: ((ds0[i].slottype==TRANSMITSLOT) && (ds0[i].msgOriginFlag==true) && (ds0[i].retransmitFlag==true))->
-        n0_ts_msgorigin_rt:
-              		#ifdef MESSAGE_COLLISION
-						no_of_transmit++;
-					#endif	              		
+       :: ((ds0[i].slottype==TRANSMITSLOT) && 
+       (ds0[i].msgOriginFlag==true) 
+       && (ds0[i].retransmitFlag==true))->
+        n0_ts_msgorigin_rt: 
+			#ifdef MESSAGE_COLLISION
+				no_of_transmit++;
+			#endif	     		
                  	dest=ds0[i].deviceid;
-					channelno=ds0[i].channelno;
+			channelno=ds0[i].channelno;
               	   	source=node_id;
               	   	sourceorigin=node_id;
               	   	sourceorigin_saved=sourceorigin;
-              	   	tdma_channel[channelno]! SENSORDATA,source,dest,sourceorigin,msg_saved;
+              	   	tdma_channel[channelno]! SENSORDATA,
+                   source,dest,sourceorigin,msg_saved;
               	   	state=WAITFORACK;
         
        ::else ->skip;       	   	
        fi;
+/* Steps 10 to 19 of Algorithm 6 for Node 0*/
        if       
-       :: ((ds0[i].slottype==TRANSMITSLOT) && (ds0[i].msgOriginFlag==true) && (ds0[i].retransmitFlag==false))-> 
+       :: ((ds0[i].slottype==TRANSMITSLOT) 
+          && (ds0[i].msgOriginFlag==true) && (ds0[i].
+          retransmitFlag==false))->
 n0_ts_msgorigin_nrt:
-           			#ifdef MESSAGE_COLLISION
-						no_of_transmit++;
-					#endif       				
-       				if
- 				    ::msg=SENSORDATA1;
+			#ifdef MESSAGE_COLLISION
+				no_of_transmit++;
+			#endif	
+       			if
+ 		        ::msg=SENSORDATA1;
                		::msg=SENSORDATA2;
                		::msg=SENSORDATA3;
                		::msg=SENSORDATA4;
@@ -198,25 +213,30 @@ n0_ts_msgorigin_nrt:
                		sourceorigin_saved=sourceorigin;
                		channelno=ds0[i].channelno;
                		msg_saved=msg;
-               		tdma_channel[channelno]! SENSORDATA,source,dest,sourceorigin,msg;
+               		tdma_channel[channelno]! SENSORDATA,source,
+                    dest,sourceorigin,msg;
                		state=WAITFORACK;
                		}
          ::else->skip;      		
-        fi;    
+        fi;
+/* Steps 1 to 9 of Algorithm 7 for Node0 */    
         if       
-       :: ((ds0[i].slottype==TRANSMITSLOT) && (ds0[i].msgOriginFlag==false) && (ds0[i].retransmitFlag==true))->
+       :: ((ds0[i].slottype==TRANSMITSLOT) && 
+       (ds0[i].msgOriginFlag==false) && 
+       (ds0[i].retransmitFlag==true))->
 n0_ts_fw_rt:       
-       				#ifdef MESSAGE_COLLISION
-						no_of_transmit++;
-					#endif
-       				if
+       			#ifdef MESSAGE_COLLISION
+				no_of_transmit++;
+			#endif	
+			if
                		::(retransmit==true)->
                		atomic
                		{
               	   	dest=ds0[i].deviceid;
               	   	channelno=ds0[i].channelno;
               	   	source=node_id;
-              	   	tdma_channel[channelno]! SENSORDATA,source,dest,sourceorigin_saved,msg_saved;
+              	   	tdma_channel[channelno]! SENSORDATA,source,
+                    dest,sourceorigin_saved,msg_saved;
               	   	state=WAITFORACK;
               	   	}
               	   	::else 
@@ -233,19 +253,27 @@ n0_ts_fw_rt:
                 	fi;
         ::else->skip;
         fi;
+        /* Steps 10 to 17 of Algorithm 7 for Node 0 */
         if       
-       :: ((ds0[i].slottype==TRANSMITSLOT) && (ds0[i].msgOriginFlag==false) && (ds0[i].retransmitFlag==false))->
+       :: ((ds0[i].slottype==TRANSMITSLOT) && 
+       (ds0[i].msgOriginFlag==false) && 
+       (ds0[i].retransmitFlag==false))->
  n0_ts_fw_nrt:        				
                		#ifdef MESSAGE_COLLISION
-						no_of_transmit++;
-					#endif
+				no_of_transmit++;
+			#endif	
+			atomic
+               		{
               	   	dest=ds0[i].deviceid;
               	   	channelno=ds0[i].channelno;
               	   	source=node_id;
-              	   	tdma_channel[channelno]! SENSORDATA,source,dest,sourceorigin_saved,msg_saved;
-              	   	state=WAITFORACK;              
+              	   	tdma_channel[channelno]! SENSORDATA,source,
+                    dest,sourceorigin_saved,msg_saved;
+              	   	state=WAITFORACK;
+              	   	}              
         ::else->skip;
         fi;
+/*Steps 1 to 25 of Algorithm 8 for Node 0*/
         if
         ::((ds0[i].slottype==TRANSMITSLOT) && (state==WAITFORACK))
 n0_ts_wait_for_ack:        
@@ -256,13 +284,15 @@ n0_ts_ack_loss:
                   retransmit=true;
                   state=DEFAULT;
                   break;
-             ::tdma_channel[channelno]? ACK(source,dest,sourceorigin,msg);
+             ::tdma_channel[channelno]? ACK(source,dest,sourceorigin,
+               msg);
 n0_ts_ack_recvd:  retransmit=false;
                   state=DEFAULT;
                   break;    
              od;
         ::else->skip;   
         fi;
+/* Steps 1 to 18 of Algorithm 9 for Node 0 */
         if
         ::(ds0[i].slottype==RECIEVESLOT)
 n0_rs:   set(timeslottimer0,TIMESLOT);
@@ -270,10 +300,12 @@ n0_rs:   set(timeslottimer0,TIMESLOT);
           do
              ::expire(timeslottimer0)->
 n0_rs_msg_loss: break;
-             ::tdma_channel[channelno]? SENSORDATA(source,dest,sourceorigin,msg_recvd);
+             ::tdma_channel[channelno]? SENSORDATA(source,dest,
+             sourceorigin,msg_recvd);
 n0_rs_msg_recvd: msg_saved=msg_recvd;
                 sourceorigin_saved=sourceorigin;
-                 tdma_channel[channelno] !ACK(dest,source,sourceorigin,msg_recvd);
+                 tdma_channel[channelno] !ACK(dest,source,
+                 sourceorigin,msg_recvd);
                	break;     
           od;
        ::else->skip;
@@ -284,13 +316,15 @@ n0_rs_msg_recvd: msg_saved=msg_recvd;
 }
 proctype Node1(byte node_id)
 {
-byte i,source,dest,sourceorigin,msg,state,channelno,msgretransmit,msg_saved,msg_recvd,sourceorigin_saved;
+byte i,source,dest,sourceorigin,msg,state,channelno,
+msgretransmit,msg_saved,msg_recvd,sourceorigin_saved;
 int temp1,temp2;
 bool retransmit;
+/* Steps 1 to 12 of Algorithm 5  for Node 1*/
 begin_tdma:
 #ifdef DESIGNERROR
 progress1n1_cycle_begin:
-#endif	
+#endif
 atomic
 {
 set(gltimer,GROSSCYCLETIME);
@@ -302,6 +336,7 @@ ireset1=true;
          expire(gltimer);
          goto begin_tdma; 
     ::(i<LDS1)->
+ /* Steps 4 to 12 of Algorithm 5 for Node1 */
        if
        ::(i==0)->
        		if
@@ -323,35 +358,42 @@ ireset1=true;
        expire(lctimer1);
        break;
        od;
-       #ifdef DESIGNERROR
-progress1n1_slot_begin:
-#endif	
+/* Steps 1 to 9 of Algorithm 6 for Node 1 */
 n1_slot_begin:
+#ifdef DESIGNERROR
+progress1n1_slot_begin:
+#endif
 #ifdef MESSAGE_COLLISION
-	no_of_transmit=0;
+no_of_transmit=0;
 #endif              
        if       
-       :: ((ds1[i].slottype==TRANSMITSLOT) && (ds1[i].msgOriginFlag==true) && (ds1[i].retransmitFlag==true))->
+       :: ((ds1[i].slottype==TRANSMITSLOT) && (ds1[i].
+       msgOriginFlag==true) && 
+       (ds1[i].retransmitFlag==true))->
 n1_ts_msgorigin_rt:	
-					#ifdef MESSAGE_COLLISION
-						no_of_transmit++;
-					#endif
-					dest=ds1[i].deviceid;
-					channelno=ds1[i].channelno;
+			#ifdef MESSAGE_COLLISION
+				no_of_transmit++;
+			#endif
+			dest=ds1[i].deviceid;
+			channelno=ds1[i].channelno;
               	   	source=node_id;
               	   	sourceorigin=node_id;
               	   	sourceorigin_saved=sourceorigin;
-              	   	tdma_channel[channelno]! SENSORDATA,source,dest,sourceorigin,msg_saved;
+              	   	tdma_channel[channelno]! SENSORDATA,source,
+                    dest,sourceorigin,msg_saved;
               	   	state=WAITFORACK;
        ::else->skip;       	   	
        fi;
+/* Steps 10 to 19 of Algorithm 6 for Node1 */
        if       
-       :: ((ds1[i].slottype==TRANSMITSLOT) && (ds1[i].msgOriginFlag==true) && (ds1[i].retransmitFlag==false))-> 
+       :: ((ds1[i].slottype==TRANSMITSLOT) && 
+       (ds1[i].msgOriginFlag==true) && 
+       (ds1[i].retransmitFlag==false))-> 
 n1_ts_msgorigin_nrt:       				
-       				#ifdef MESSAGE_COLLISION
-						no_of_transmit++;
-					#endif
-       				if
+       			#ifdef MESSAGE_COLLISION
+				no_of_transmit++;
+			#endif
+			if
                		::msg=SENSORDATA1;
                		::msg=SENSORDATA2;
                		::msg=SENSORDATA3;
@@ -364,22 +406,27 @@ n1_ts_msgorigin_nrt:
                		sourceorigin_saved=sourceorigin;
                		channelno=ds1[i].channelno;
                		msg_saved=msg;
-               		tdma_channel[channelno]! SENSORDATA,source,dest,sourceorigin_saved,msg_saved;
+               		tdma_channel[channelno]! SENSORDATA,source,
+                    dest,sourceorigin_saved,msg_saved;
                		state=WAITFORACK;
         ::else->skip;
-        fi;    
+        fi;
+/* Steps 1 to 9 of Algorithm 7 for Node1 */     
         if       
-       :: ((ds1[i].slottype==TRANSMITSLOT) && (ds1[i].msgOriginFlag==false) && (ds1[i].retransmitFlag==true))->
+       :: ((ds1[i].slottype==TRANSMITSLOT) && 
+       (ds1[i].msgOriginFlag==false) && 
+       (ds1[i].retransmitFlag==true))->
 n1_ts_fw_rt:
-       				#ifdef MESSAGE_COLLISION
-						no_of_transmit++;
-					#endif
-       				if
+			#ifdef MESSAGE_COLLISION
+				no_of_transmit++;
+			#endif
+       			if
                		::(retransmit==true)->
               	   	dest=ds1[i].deviceid;
               	   	channelno=ds1[i].channelno;
               	   	source=node_id;
-              	   	tdma_channel[channelno]! SENSORDATA,source,dest,sourceorigin_saved,msg_saved;
+              	   	tdma_channel[channelno]! SENSORDATA,
+                   source,dest,sourceorigin_saved,msg_saved;
               	   	state=WAITFORACK;
               	   	::else 
               	   		set(timeslottimer1,TIMESLOT);
@@ -391,21 +438,27 @@ n1_ts_fw_rt:
                 	fi;
         ::else->skip;
         fi;
+/* Steps 10 to 17 of Algorithm 7 for Node1 */
         if       
-       	:: ((ds1[i].slottype==TRANSMITSLOT) && (ds1[i].msgOriginFlag==false) && (ds1[i].retransmitFlag==false))->
-n1_ts_fw_nrt:       
-					#ifdef MESSAGE_COLLISION
-						no_of_transmit++;
-					#endif
-					dest=ds1[i].deviceid;
+       	:: ((ds1[i].slottype==TRANSMITSLOT) && 
+        (ds1[i].msgOriginFlag==false) && 
+        (ds1[i].retransmitFlag==false))->
+n1_ts_fw_nrt:           
+			#ifdef MESSAGE_COLLISION
+				no_of_transmit++;
+			#endif
+			dest=ds1[i].deviceid;
               	   	channelno=ds1[i].channelno;
               	   	source=node_id;
-              	   	tdma_channel[channelno]! SENSORDATA,source,dest,sourceorigin_saved,msg_saved;
+              	   	tdma_channel[channelno]! SENSORDATA,
+                   source,dest,sourceorigin_saved,msg_saved;
               	   	state=WAITFORACK;
         ::else->skip;
-        fi; 
+        fi;
+/*Steps 1 to 25 of Algorithm 8 for Node1*/ 
         if
-        ::((ds1[i].slottype==TRANSMITSLOT) && (state==WAITFORACK))
+        ::((ds1[i].slottype==TRANSMITSLOT) && 
+        (state==WAITFORACK))
 n1_ts_wait_for_ack:        
              set(timeslottimer1,TIMESLOT);
              do
@@ -414,7 +467,8 @@ n1_ts_ack_loss:
                   retransmit=true;
                   state=DEFAULT;
                   break;
-             ::tdma_channel[channelno]? ACK(source,dest,sourceorigin,msg);
+             ::tdma_channel[channelno]? ACK(source,dest,
+             sourceorigin,msg);
 n1_ts_ack_recvd:             
                   retransmit=false;
                   state=DEFAULT;
@@ -422,6 +476,7 @@ n1_ts_ack_recvd:
              od;
         ::else->skip;   
         fi;
+/* Steps 1 to 18 of Algorithm 9 for Node1 */
         if
         ::(ds1[i].slottype==RECIEVESLOT)
 n1_rs:  set(timeslottimer1,TIMESLOT);
@@ -429,11 +484,13 @@ n1_rs:  set(timeslottimer1,TIMESLOT);
           do
              ::expire(timeslottimer1)->
 n1_rs_msg_loss:break;
-             ::tdma_channel[channelno]? SENSORDATA(source,dest,sourceorigin,msg_recvd);
+             ::tdma_channel[channelno]? SENSORDATA
+             (source,dest,sourceorigin,msg_recvd);
 n1_rs_msg_recvd:
 				msg_saved=msg_recvd;
                 sourceorigin_saved=sourceorigin;
-                 tdma_channel[channelno] !ACK(dest,source,sourceorigin,msg_recvd);
+                 tdma_channel[channelno] !ACK(dest,
+                 source,sourceorigin,msg_recvd);
                	break;     
           od;
        ::else->skip;
@@ -444,9 +501,11 @@ n1_rs_msg_recvd:
 }
 proctype Node2(byte node_id)
 {
-byte i,source,dest,sourceorigin,sourceorigin_saved,msg,msg_saved,state,channelno,msgretransmit,msg_recvd;
+byte i,source,dest,sourceorigin,sourceorigin_saved,msg,
+msg_saved,state,channelno,msgretransmit,msg_recvd;
 int temp1,temp2;
 bool retransmit;
+/* Steps 1 to 12 of Algorithm 5  for Node 2*/
 begin_tdma:
 #ifdef DESIGNERROR
 progress2n2_cycle_begin:
@@ -459,6 +518,7 @@ ireset2=true;
     	 expire(gltimer);
          goto begin_tdma;       
     ::(i<LDS2)->
+ /* Steps 4 to 12 of Algorithm 5 for Node2 */
        if
        ::(i==0)->
        		if
@@ -480,35 +540,42 @@ ireset2=true;
        expire(lctimer2);
        break;
        od;
-       #ifdef DESIGNERROR
-progress2n2_slot_begin:
-#endif	    
+/* Steps 1 to 9 of Algorithm 6 for Node2 */    
 n2_slot_begin:
-       #ifdef MESSAGE_COLLISION
-			no_of_transmit=0;
-	   #endif          
+	#ifdef DESIGNERROR
+		progress2n2_slot_begin:
+	#endif
+	#ifdef MESSAGE_COLLISION
+		no_of_transmit=0;
+	#endif	          
        if       
-       :: ((ds2[i].slottype==TRANSMITSLOT) && (ds2[i].msgOriginFlag==true) && (ds2[i].retransmitFlag==true))->
-n2_ts_msgorigin_rt:       
-              	   	#ifdef MESSAGE_COLLISION
-						no_of_transmit++;
-					#endif
+       :: ((ds2[i].slottype==TRANSMITSLOT) && 
+       (ds2[i].msgOriginFlag==true) && 
+       (ds2[i].retransmitFlag==true))->
+n2_ts_msgorigin_rt:
+			#ifdef MESSAGE_COLLISION
+				no_of_transmit++;
+			#endif       
               	   	dest=ds2[i].deviceid;
               	   	channelno=ds2[i].channelno;
               	   	source=node_id;
               	   	sourceorigin=node_id;
               	   	sourceorigin_saved=sourceorigin;
-              	   	tdma_channel[channelno]! SENSORDATA,source,dest,sourceorigin,msg_saved;
+              	   	tdma_channel[channelno]! SENSORDATA,
+                   source,dest,sourceorigin,msg_saved;
               	   	state=WAITFORACK;
        ::else->skip;
        fi;
+/* Steps 10 to 19 of Algorithm 6 for Node2*/
        if       
-       :: ((ds2[i].slottype==TRANSMITSLOT) && (ds2[i].msgOriginFlag==true) && (ds2[i].retransmitFlag==false))-> 
+       :: ((ds2[i].slottype==TRANSMITSLOT) && 
+       (ds2[i].msgOriginFlag==true) && 
+       (ds2[i].retransmitFlag==false))-> 
 n2_ts_msgorigin_nrt:       				
-       				#ifdef MESSAGE_COLLISION
-						no_of_transmit++;
-					#endif
-       				if
+       			#ifdef MESSAGE_COLLISION
+				no_of_transmit++;
+			#endif
+			if
                		::msg=SENSORDATA1;
                		::msg=SENSORDATA2;
                		::msg=SENSORDATA3;
@@ -521,42 +588,53 @@ n2_ts_msgorigin_nrt:
                		sourceorigin_saved=node_id;
                		msg_saved=msg;
                		channelno=ds2[i].channelno;
-               		tdma_channel[channelno]! SENSORDATA,source,dest,sourceorigin,msg;
+               		tdma_channel[channelno]! SENSORDATA,
+                 source,dest,sourceorigin,msg;
                		state=WAITFORACK;
         ::else->skip;
-        fi;    
+        fi;
+/* Steps 1 to 9 of Algorithm 7 for Node2 */     
         if       
-       :: ((ds2[i].slottype==TRANSMITSLOT) && (ds2[i].msgOriginFlag==false) && (ds2[i].retransmitFlag==true))->
+       :: ((ds2[i].slottype==TRANSMITSLOT) && 
+       (ds2[i].msgOriginFlag==false) && 
+       (ds2[i].retransmitFlag==true))->
 n2_ts_fw_rt:       				
-       				#ifdef MESSAGE_COLLISION
-						no_of_transmit++;
-					#endif
-       				if
+       			#ifdef MESSAGE_COLLISION
+				no_of_transmit++;
+			#endif
+			if
                		::(retransmit==true)->
               	   	dest=ds2[i].deviceid;
               	   	channelno=ds2[i].channelno;
               	   	source=node_id;
-              	   	tdma_channel[channelno]! SENSORDATA,source,dest,sourceorigin_saved,msg_saved;
+              	   	tdma_channel[channelno]! SENSORDATA,
+                   source,dest,sourceorigin_saved,msg_saved;
               	   	state=WAITFORACK;
                 	fi;
         ::else->skip;
         fi;
+/* Steps 10 to 17 of Algorithm 7 for Node2 */
         if       
-       	:: ((ds2[i].slottype==TRANSMITSLOT) && (ds2[i].msgOriginFlag==false) && (ds2[i].retransmitFlag==false))->
+       	:: ((ds2[i].slottype==TRANSMITSLOT) && 
+        (ds2[i].msgOriginFlag==false) && 
+        (ds2[i].retransmitFlag==false))->
 n2_ts_fw_nrt:       
-					#ifdef MESSAGE_COLLISION
-						no_of_transmit++;
-					#endif
-					dest=ds2[i].deviceid;
+			#ifdef MESSAGE_COLLISION
+				no_of_transmit++;
+			#endif
+			dest=ds2[i].deviceid;
               	   	channelno=ds2[i].channelno;
               	   	source=node_id;
-              	   	tdma_channel[channelno]! SENSORDATA,source,dest,sourceorigin_saved,msg_saved;
+              	   	tdma_channel[channelno]! SENSORDATA,
+                   source,dest,sourceorigin_saved,msg_saved;
               	   	state=WAITFORACK;
               	   	/*}*/
         ::else->skip;
-        fi;   
+        fi;
+/*Steps 1 to 25 of Algorithm 8 for Node2 */   
         if
-        ::((ds2[i].slottype==TRANSMITSLOT) && (state==WAITFORACK))
+        ::((ds2[i].slottype==TRANSMITSLOT) && 
+        (state==WAITFORACK))
 n2_ts_wait_for_ack:                	
              set(timeslottimer2,TIMESLOT);
              do
@@ -565,7 +643,8 @@ n2_ts_ack_loss:
                   retransmit=true;
                   state=DEFAULT;
                   break;
-             ::tdma_channel[channelno]? ACK(source,dest,sourceorigin,msg);
+             ::tdma_channel[channelno]? ACK(source,
+             dest,sourceorigin,msg);
 n2_ts_ack_recvd:             
                   retransmit=false;
                   state=DEFAULT;
@@ -573,6 +652,7 @@ n2_ts_ack_recvd:
              od;
         ::else->skip;   
         fi;
+/* Steps 1 to 18 of Algorithm 9 for Node2 */
         if
         ::(ds2[i].slottype==RECIEVESLOT)
 n2_rs:    set(timeslottimer2,TIMESLOT);
@@ -581,11 +661,13 @@ n2_rs:    set(timeslottimer2,TIMESLOT);
              ::expire(timeslottimer2)->
 n2_rs_msg_loss:             
                break;
-             ::tdma_channel[channelno]? SENSORDATA(source,dest,sourceorigin,msg_recvd);
+             ::tdma_channel[channelno]? SENSORDATA(source,
+             dest,sourceorigin,msg_recvd);
 n2_rs_msg_recvd:             
                msg_saved=msg_recvd;
                 sourceorigin_saved=sourceorigin;
-                 tdma_channel[channelno] !ACK(dest,source,sourceorigin,msg);
+                 tdma_channel[channelno] !ACK(dest,
+                 source,sourceorigin,msg);
                	break;          
           od;
        ::else->skip;
@@ -596,12 +678,14 @@ n2_rs_msg_recvd:
 }
 proctype Node3(byte node_id)
 {
-byte i,source,dest,sourceorigin,sourceorigin_saved,msg,msg_saved,msg_recvd,state,channelno,msgretransmit;
+byte i,source,dest,sourceorigin,sourceorigin_saved,msg,
+msg_saved,msg_recvd,state,channelno,msgretransmit;
 int temp1,temp2;
 bool retransmit;
+/* Steps 1 to 12 of Algorithm 5  for Node 3*/
 begin_tdma:
 #ifdef DESIGNERROR
-progress1n1_cycle_begin:
+progress3n3_cycle_begin:
 #endif
 atomic
 {
@@ -614,6 +698,7 @@ ireset3=true;
          expire(gltimer);
          goto begin_tdma;         
     ::(i<LDS3)->
+ /* Steps 4 to 12 of Algorithm 5 for Node3 */
        if
        ::(i==0)->
        		if
@@ -635,35 +720,42 @@ ireset3=true;
        expire(lctimer3);
        break;
        od;
-#ifdef DESIGNERROR
-progress3n3_slot_begin:
-#endif	   
+/* Steps 1 to 9 of Algorithm 6 for Node3 */   
 n3_slot_begin:
-       #ifdef MESSAGE_COLLISION
-			no_of_transmit=0;
-	   #endif       
+	#ifdef MESSAGE_COLLISION
+		no_of_transmit=0;
+	#endif
+       #ifdef DESIGNERROR
+		progress3n3_slot_begin:
+	#endif
        if       
-       :: ((ds3[i].slottype==TRANSMITSLOT) && (ds3[i].msgOriginFlag==true) && (ds3[i].retransmitFlag==true))->
-n3_ts_msgorigin_rt:       
-              	   	#ifdef MESSAGE_COLLISION
-						no_of_transmit++;
-					#endif
+       :: ((ds3[i].slottype==TRANSMITSLOT) && 
+       (ds3[i].msgOriginFlag==true) && 
+       (ds3[i].retransmitFlag==true))->
+n3_ts_msgorigin_rt:
+			#ifdef MESSAGE_COLLISION
+				no_of_transmit++;
+			#endif       
               	   	dest=ds3[i].deviceid;
               	   	channelno=ds3[i].channelno;
               	   	source=node_id;
               	   	sourceorigin=node_id;
               	   	sourceorigin_saved=sourceorigin;
-              	   	tdma_channel[channelno]! SENSORDATA,source,dest,sourceorigin,msg_saved;
+              	   	tdma_channel[channelno]! SENSORDATA,source,
+                   dest,sourceorigin,msg_saved;
               	   	state=WAITFORACK;
        ::else->skip;
        fi;
+/* Steps 10 to 19 of Algorithm 6 for Node3*/
        if       
-       :: ((ds3[i].slottype==TRANSMITSLOT) && (ds3[i].msgOriginFlag==true) && (ds3[i].retransmitFlag==false))->
+       :: ((ds3[i].slottype==TRANSMITSLOT) && 
+       (ds3[i].msgOriginFlag==true) && 
+       (ds3[i].retransmitFlag==false))->
 n3_ts_msgorigin_nrt:        
-       				#ifdef MESSAGE_COLLISION
-						no_of_transmit++;
-					#endif
-       				if
+       			#ifdef MESSAGE_COLLISION
+				no_of_transmit++;
+			#endif
+			if
                		::msg=SENSORDATA1;
                		::msg=SENSORDATA2;
                		::msg=SENSORDATA3;
@@ -676,41 +768,52 @@ n3_ts_msgorigin_nrt:
                		sourceorigin_saved=sourceorigin;
                		channelno=ds3[i].channelno;
                		msg_saved=msg;
-               		tdma_channel[channelno]! SENSORDATA,source,dest,sourceorigin,msg;
+               		tdma_channel[channelno]! SENSORDATA,
+                 source,dest,sourceorigin,msg;
                		state=WAITFORACK;
         ::else->skip;
-        fi;    
+        fi;
+/* Steps 1 to 9 of Algorithm 7 for Node3 */     
         if       
-       :: ((ds3[i].slottype==TRANSMITSLOT) && (ds3[i].msgOriginFlag==false) && (ds3[i].retransmitFlag==true))->
+       :: ((ds3[i].slottype==TRANSMITSLOT) && 
+       (ds3[i].msgOriginFlag==false) && 
+       (ds3[i].retransmitFlag==true))->
 n3_ts_fw_rt:
-       				#ifdef MESSAGE_COLLISION
-						no_of_transmit++;
-					#endif
-       				if
+       			#ifdef MESSAGE_COLLISION
+				no_of_transmit++;
+			#endif
+			if
                		::(retransmit==true)->
               	   	dest=ds3[i].deviceid;
               	   	channelno=ds3[i].channelno;
               	   	source=node_id;
-              	   	tdma_channel[channelno]! SENSORDATA,source,dest,sourceorigin_saved,msg_saved;
+              	   	tdma_channel[channelno]! SENSORDATA,
+                   source,dest,sourceorigin_saved,msg_saved;
               	   	state=WAITFORACK;
                 	fi;
         ::else->skip;
         fi;
+/* Steps 10 to 17 of Algorithm 7 for Node3 */
         if       
-       	:: ((ds3[i].slottype==TRANSMITSLOT) && (ds3[i].msgOriginFlag==false) && (ds3[i].retransmitFlag==false))->
+       	:: ((ds3[i].slottype==TRANSMITSLOT) && 
+        (ds3[i].msgOriginFlag==false) && 
+        (ds3[i].retransmitFlag==false))->
 n3_ts_fw_nrt:       				
               	   	#ifdef MESSAGE_COLLISION
-						no_of_transmit++;
-					#endif
-              	   	dest=ds3[i].deviceid;
+				no_of_transmit++;
+			#endif
+			dest=ds3[i].deviceid;
               	   	channelno=ds3[i].channelno;
               	   	source=node_id;
-              	   	tdma_channel[channelno]! SENSORDATA,source,dest,sourceorigin_saved,msg_saved;
+              	   	tdma_channel[channelno]! SENSORDATA,
+                   source,dest,sourceorigin_saved,msg_saved;
               	   	state=WAITFORACK;            
         ::else->skip;
         fi;
+/*Steps 1 to 25 of Algorithm 8 for Node3 */
         if
-        ::((ds3[i].slottype==TRANSMITSLOT) && (state==WAITFORACK))
+        ::((ds3[i].slottype==TRANSMITSLOT) && 
+        (state==WAITFORACK))
 n3_ts_wait_for_ack:                	           
              set(timeslottimer3,TIMESLOT);
              do
@@ -719,7 +822,8 @@ n3_ts_ack_loss:
                   retransmit=true;
                   state=DEFAULT;
                   break;
-             ::tdma_channel[channelno]? ACK(source,dest,sourceorigin,msg);
+             ::tdma_channel[channelno]? ACK(source,
+             dest,sourceorigin,msg);
 n3_ts_ack_recvd:             
                   retransmit=false;
                   state=DEFAULT;
@@ -727,6 +831,7 @@ n3_ts_ack_recvd:
              od;
         ::else->skip;
         fi;
+/* Steps 1 to 18 of Algorithm 9 for Node3 */
         if
         ::(ds3[i].slottype==RECIEVESLOT)
 n3_rs:     
@@ -736,11 +841,13 @@ n3_rs:
              ::expire(timeslottimer3)->
 n3_rs_msg_loss:             
                break;
-             ::tdma_channel[channelno]? SENSORDATA(source,dest,sourceorigin,msg_recvd);
+             ::tdma_channel[channelno]? SENSORDATA(source,
+             dest,sourceorigin,msg_recvd);
 n3_rs_msg_recvd:             
                msg_saved=msg_recvd;
                sourceorigin_saved=sourceorigin;
-               tdma_channel[channelno] !ACK(dest,source,sourceorigin,msg_recvd);
+               tdma_channel[channelno] !ACK(dest,source,
+               sourceorigin,msg_recvd);
                break;     
           od;
        ::else->skip;
@@ -762,6 +869,8 @@ proctype Daemon()
 init {
 	atomic
 	{
+		/* Initialising the device schedule constructed 
+        after applying Algorithm 1 to 4 */
 		ds0[0].slotno=2;
 		ds0[0].channelno=1;
 		ds0[0].deviceid=1;
@@ -980,8 +1089,13 @@ init {
 	
 	}			
 }
+/*Never claims used for verification */
 #ifdef NONLOSSY
-#ifdef P0 /*Reachable State */
+/* Reachability verification at Node 0 for 
+NONLOSSY Links*/
+#ifdef P0
+/* Never claim for verifying the reachability 
+of the state no_s1  in NONLOSSY LINKS*/
 never
 {
 do
@@ -990,7 +1104,9 @@ do
 od;
 }
 #endif
-#ifdef P1 /* Unreachable State */
+#ifdef P1
+/* Never claim for verifying the reachability of 
+the state no_s2 from n0_s1  in NONLOSSY LINKS*/ 
 never  
 {
 do
@@ -1003,7 +1119,9 @@ do
 od;
 }
 #endif
-#ifdef P2 /*Unreachable State */
+#ifdef P2 
+/* Never claim for verifying the reachability of 
+the state no_s3 from n0_s1  in NONLOSSY LINKS*/
 never
 {
 do
@@ -1016,7 +1134,9 @@ do
 od;
 }
 #endif
-#ifdef P3 /*Unreachable State */
+#ifdef P3
+/* Never claim for verifying the reachability of 
+the state no_s4 from n0_s1  in NONLOSSY LINKS*/
 never
 {
 do
@@ -1029,7 +1149,9 @@ do
 od;
 }
 #endif
-#ifdef P4 /*Unreachable State */
+#ifdef P4
+/* Never claim for verifying the reachability of 
+the state no_s5 from n0_s1  in NONLOSSY LINKS*/
 never
 {
 do
@@ -1042,7 +1164,9 @@ do
 od;
 }
 #endif
-#ifdef P5 /*Unreachable State */
+#ifdef P5
+/* Never claim for verifying the reachability of 
+the state no_s6 from n0_s1  in NONLOSSY LINKS*/
 never
 {
 do
@@ -1055,7 +1179,9 @@ do
 od;
 }
 #endif
-#ifdef P6 /*Unreachable State */
+#ifdef P6
+/* Never claim for verifying the reachability of 
+the state no_s7 from n0_s1  in NONLOSSY LINKS*/
 never
 {
 do
@@ -1068,7 +1194,9 @@ do
 od;
 }
 #endif
-#ifdef P7 /*Unreachable State */
+#ifdef P7
+/* Never claim for verifying the reachability of 
+the state no_s8 from n0_s1  in NONLOSSY LINKS*/
 never
 {
 do
@@ -1082,7 +1210,9 @@ od;
 }
 #endif
 #ifdef P8
-never   /* Reachable State */
+/* Never claim for verifying the reachability of 
+the state no_s9 from n0_s1  in NONLOSSY LINKS*/
+never 
 {
 do
 ::n0_s1->break;
@@ -1094,7 +1224,9 @@ do
 od;
 }
 #endif
-#ifdef P9 /*Unreachable State */
+#ifdef P9
+/* Never claim for verifying the reachability of 
+the state no_s10 from n0_s1  in NONLOSSY LINKS*/
 never
 {
 do
@@ -1108,7 +1240,9 @@ od;
 }
 #endif
 #ifdef P10
-never /* Reachable State */
+/* Never claim for verifying the reachability of 
+the state no_s11 from n0_s1  in NONLOSSY LINKS*/
+never
 {
 do
 ::n0_s1->break;
@@ -1120,8 +1254,10 @@ do
 od;
 }
 #endif
-
-#ifdef P11 /*Reachable State */
+/* Reachability verification at Node 1 for NONLOSSY links*/
+#ifdef P11
+/* Never claim for verifying the reachability of 
+the state n1_s1 in NONLOSSY LINKS*/
 never
 {
 do
@@ -1130,7 +1266,9 @@ do
 od;
 }
 #endif
-#ifdef P12 /* Unreachable State */
+#ifdef P12
+/* Never claim for verifying the reachability of 
+the state n1_s2 from n1_s1 in NONLOSSY LINKS*/
 never  
 {
 do
@@ -1143,7 +1281,9 @@ do
 od;
 }
 #endif
-#ifdef P13 /* Reachable State */ 
+#ifdef P13 
+/* Never claim for verifying the reachability of 
+the state n1_s3 from n1_s1 in NONLOSSY LINKS*/
 never
 {
 do
@@ -1156,7 +1296,9 @@ do
 od;
 }
 #endif
-#ifdef P14 /* Unreachable State */ 
+#ifdef P14
+/* Never claim for verifying the reachability of 
+the state n1_s4 from n1_s1 in NONLOSSY LINKS*/ 
 never
 {
 do
@@ -1169,7 +1311,9 @@ do
 od;
 }
 #endif
-#ifdef P15 /* Reachable State */
+#ifdef P15
+/* Never claim for verifying the reachability of 
+the state n1_s5 from n1_s1 in NONLOSSY LINKS*/ 
 never
 {
 do
@@ -1182,7 +1326,9 @@ do
 od;
 }
 #endif
-#ifdef P16 /* Reachable State */
+#ifdef P16
+/* Never claim for verifying the reachability of 
+the state n1_s6 from n1_s1 in NONLOSSY LINKS*/ 
 never
 {
 do
@@ -1195,7 +1341,9 @@ do
 od;
 }
 #endif
-#ifdef P17 /* Unreachable State */
+#ifdef P17
+/* Never claim for verifying the reachability of 
+the state n1_s7 from n1_s1 in NONLOSSY LINKS*/ 
 never
 {
 do
@@ -1208,7 +1356,9 @@ do
 od;
 }
 #endif
-#ifdef P18 /* Reachable State */ 
+#ifdef P18
+/* Never claim for verifying the reachability of 
+the state n1_s8 from n1_s1 in NONLOSSY LINKS*/  
 never
 {
 do
@@ -1221,7 +1371,9 @@ do
 od;
 }
 #endif
-#ifdef P19 /* Reachable State */
+#ifdef P19
+/* Never claim for verifying the reachability of 
+the state n1_s9 from n1_s1 in NONLOSSY LINKS*/ 
 never   
 {
 do
@@ -1234,7 +1386,9 @@ do
 od;
 }
 #endif
-#ifdef P20 /* Unreachable State */
+#ifdef P20
+/* Never claim for verifying the reachability of 
+the state n1_s10 from n1_s1 in NONLOSSY LINKS*/ 
 never
 {
 do
@@ -1247,7 +1401,9 @@ do
 od;
 }
 #endif
-#ifdef P21 /* Reachable State */ 
+#ifdef P21
+/* Never claim for verifying the reachability of 
+the state n1_s11 from n1_s1 in NONLOSSY LINKS*/  
 never 
 {
 do
@@ -1260,7 +1416,10 @@ do
 od;
 }
 #endif
-#ifdef P22 /* Reachable State */ 
+/* Reachability verification at Node 2 for NONLOSSY links*/
+#ifdef P22 
+/* Never claim for verifying the reachability of 
+the state n2_s1 in NONLOSSY LINKS*/  
 never
 {
 do
@@ -1269,7 +1428,9 @@ do
 od;
 }
 #endif
-#ifdef P23 /* Unreachable State */
+#ifdef P23
+/*Never claim for verifying the reachability of 
+the state n2_s2 from n2_s1 in NONLOSSY LINKS*/
 never  
 {
 do
@@ -1282,7 +1443,9 @@ do
 od;
 }
 #endif
-#ifdef P24 /* Reachable State */ 
+#ifdef P24
+/*Never claim for verifying the reachability of 
+the state n2_s3 from n2_s1 in NONLOSSY LINKS*/ 
 never
 {
 do
@@ -1295,7 +1458,9 @@ do
 od;
 }
 #endif
-#ifdef P25  /* Unreachable State */
+#ifdef P25
+/*Never claim for verifying the reachability of 
+the state n2_s4 from n2_s1 in NONLOSSY LINKS*/ 
 never
 {
 do
@@ -1308,7 +1473,9 @@ do
 od;
 }
 #endif
-#ifdef P26 /* Reachable State */
+#ifdef P26
+/*Never claim for verifying the reachability of 
+the state n2_s5 from n2_s1 in NONLOSSY LINKS*/
 never
 {
 do
@@ -1321,7 +1488,9 @@ do
 od;
 }
 #endif
-#ifdef P27 /* Reachable State */
+#ifdef P27
+/*Never claim for verifying the reachability of 
+the state n2_s6 from n2_s1 in NONLOSSY LINKS*/
 never
 {
 do
@@ -1334,7 +1503,9 @@ do
 od;
 }
 #endif
-#ifdef P28 /* Unreachable State */
+#ifdef P28
+/*Never claim for verifying the reachability of 
+the state n2_s7 from n2_s1 in NONLOSSY LINKS*/
 never
 {
 do
@@ -1347,7 +1518,9 @@ do
 od;
 }
 #endif
-#ifdef P29 /* Reachable State */   
+#ifdef P29
+/*Never claim for verifying the reachability of 
+the state n2_s8 from n2_s1 in NONLOSSY LINKS*/   
 never
 {
 do
@@ -1360,7 +1533,9 @@ do
 od;
 }
 #endif
-#ifdef P30 /* Reachable State */
+#ifdef P30
+/*Never claim for verifying the reachability of 
+the state n2_s9 from n2_s1 in NONLOSSY LINKS*/
 never   
 {
 do
@@ -1373,7 +1548,9 @@ do
 od;
 }
 #endif
-#ifdef P31 /* Unreachable State */
+#ifdef P31
+/*Never claim for verifying the reachability of 
+the state n2_s10 from n2_s1 in NONLOSSY LINKS*/
 never
 {
 do
@@ -1386,7 +1563,9 @@ do
 od;
 }
 #endif
-#ifdef P32  /* Reachable State */
+#ifdef P32
+/*Never claim for verifying the reachability of 
+the state n2_s11 from n2_s1 in NONLOSSY LINKS*/
 never 
 {
 do
@@ -1399,7 +1578,10 @@ do
 od;
 }
 #endif
-#ifdef P33  /* Reachable State */
+/* Reachability verification at Node 3 for NONLOSSY links*/
+#ifdef P33
+/*Never claim for verifying the reachability of 
+the state n3_s1 in NONLOSSY LINKS*/
 never
 {
 do
@@ -1408,7 +1590,9 @@ do
 od;
 }
 #endif
-#ifdef P34 /* Unreachable State */
+#ifdef P34 
+/*Never claim for verifying the reachability of the state 
+n3_s2 from n3_s1 in NONLOSSY LINKS*/
 never  
 {
 do
@@ -1421,7 +1605,9 @@ do
 od;
 }
 #endif
-#ifdef P35 /* Reachable State */ 
+#ifdef P35
+/*Never claim for verifying the reachability of the state 
+n3_s3 from n3_s1 in NONLOSSY LINKS*/ 
 never
 {
 do
@@ -1434,7 +1620,9 @@ do
 od;
 }
 #endif
-#ifdef P36  /* Unreachable State */
+#ifdef P36
+/*Never claim for verifying the reachability of the state 
+n3_s4 from n3_s1 in NONLOSSY LINKS*/
 never
 {
 do
@@ -1447,7 +1635,9 @@ do
 od;
 }
 #endif
-#ifdef P37 /* Unreachable State */
+#ifdef P37
+/*Never claim for verifying the reachability of the state 
+n3_s5 from n3_s1 in NONLOSSY LINKS*/
 never
 {
 do
@@ -1460,7 +1650,9 @@ do
 od;
 }
 #endif
-#ifdef P38 /* Reachable State */
+#ifdef P38
+/*Never claim for verifying the reachability of the state 
+n3_s6 from n3_s1 in NONLOSSY LINKS*/
 never
 {
 do
@@ -1473,7 +1665,9 @@ do
 od;
 }
 #endif
-#ifdef P39 /* Unreachable State */
+#ifdef P39
+/*Never claim for verifying the reachability of the state 
+n3_s7 from n3_s1 in NONLOSSY LINKS*/
 never
 {
 do
@@ -1486,7 +1680,9 @@ do
 od;
 }
 #endif
-#ifdef P40    /* Reachable State */
+#ifdef P40
+/*Never claim for verifying the reachability of the state 
+n3_s8 from n3_s1 in NONLOSSY LINKS*/
 never
 {
 do
@@ -1499,7 +1695,9 @@ do
 od;
 }
 #endif
-#ifdef P41 /* Unreachable State */
+#ifdef P41
+/*Never claim for verifying the reachability of the state 
+n3_s9 from n3_s1 in NONLOSSY LINKS*/
 never   
 {
 do
@@ -1512,7 +1710,9 @@ do
 od;
 }
 #endif
-#ifdef P42 /* Unreachable State */
+#ifdef P42
+/*Never claim for verifying the reachability of the state 
+n3_s10 from n3_s1 in NONLOSSY LINKS*/
 never
 {
 do
@@ -1525,7 +1725,9 @@ do
 od;
 }
 #endif
-#ifdef P43  /* Unreachable State */
+#ifdef P43
+/*Never claim for verifying the reachability of the state 
+n3_s11 from n3_s1 in NONLOSSY LINKS*/
 never 
 {
 do
@@ -1539,8 +1741,11 @@ od;
 }
 #endif
 #endif
+/* Reachability verification at Node 0 for LOSSY Links*/
 #ifdef LOSSY
-#ifdef P0 /*Reachable State */
+#ifdef P0
+/*Never claim for verifying the reachability of the state 
+n0_s1 in LOSSY LINKS*/
 never
 {
 do
@@ -1549,7 +1754,9 @@ do
 od;
 }
 #endif
-#ifdef P1    /*Unreachable State */
+#ifdef P1
+/*Never claim for verifying the reachability of the state 
+n0_s2 from n0_s1 in LOSSY LINKS*/
 never  
 {
 do
@@ -1562,7 +1769,9 @@ do
 od;
 }
 #endif
-#ifdef P2 /* Unreachable State */
+#ifdef P2
+/*Never claim for verifying the reachability of the state 
+n0_s3 from n0_s1 in LOSSY LINKS*/
 never
 {
 do
@@ -1575,7 +1784,9 @@ do
 od;
 }
 #endif
-#ifdef P3 /* Unreachable State */
+#ifdef P3
+/*Never claim for verifying the reachability of the state 
+n0_s4 from n0_s1 in LOSSY LINKS*/ 
 never
 {
 do
@@ -1588,7 +1799,9 @@ do
 od;
 }
 #endif
-#ifdef P4 
+#ifdef P4
+/*Never claim for verifying the reachability of the state 
+n0_s5 from n0_s1 in LOSSY LINKS*/ 
 never
 {
 do
@@ -1602,6 +1815,8 @@ od;
 }
 #endif
 #ifdef P5 
+/*Never claim for verifying the reachability of the state 
+n0_s6 from n0_s1 in LOSSY LINKS*/
 never
 {
 do
@@ -1614,7 +1829,9 @@ do
 od;
 }
 #endif
-#ifdef P6 
+#ifdef P6
+/*Never claim for verifying the reachability of the state 
+n0_s7 from n0_s1 in LOSSY LINKS*/ 
 never
 {
 do
@@ -1627,7 +1844,9 @@ do
 od;
 }
 #endif
-#ifdef P7 
+#ifdef P7
+/*Never claim for verifying the reachability of the state 
+n0_s8 from n0_s1 in LOSSY LINKS*/ 
 never
 {
 do
@@ -1641,6 +1860,8 @@ od;
 }
 #endif
 #ifdef P8
+/*Never claim for verifying the reachability of the state 
+n0_s9 from n0_s1 in LOSSY LINKS*/
 never   
 {
 do
@@ -1653,7 +1874,9 @@ do
 od;
 }
 #endif
-#ifdef P9 
+#ifdef P9
+/*Never claim for verifying the reachability of the state 
+n0_s10 from n0_s1 in LOSSY LINKS*/ 
 never
 {
 do
@@ -1667,6 +1890,8 @@ od;
 }
 #endif
 #ifdef P10
+/*Never claim for verifying the reachability of the state 
+n0_s11 from n0_s1 in LOSSY LINKS*/
 never 
 {
 do
@@ -1679,8 +1904,10 @@ do
 od;
 }
 #endif
-
+/* Reachability verification at Node 1 for LOSSY Links*/
 #ifdef P11 
+/*Never claim for verifying the reachability of the state 
+n1_s1  in LOSSY LINKS*/
 never
 {
 do
@@ -1689,7 +1916,9 @@ do
 od;
 }
 #endif
-#ifdef P12 
+#ifdef P12
+/*Never claim for verifying the reachability of the state 
+n1_s2 from n1_s1 in LOSSY LINKS*/ 
 never  
 {
 do
@@ -1702,7 +1931,9 @@ do
 od;
 }
 #endif
-#ifdef P13  
+#ifdef P13
+/*Never claim for verifying the reachability of the state 
+n1_s3 from n1_s1 in LOSSY LINKS*/  
 never
 {
 do
@@ -1715,7 +1946,9 @@ do
 od;
 }
 #endif
-#ifdef P14  
+#ifdef P14
+/*Never claim for verifying the reachability of the state 
+n1_s4 from n1_s1 in LOSSY LINKS*/  
 never
 {
 do
@@ -1728,7 +1961,9 @@ do
 od;
 }
 #endif
-#ifdef P15 
+#ifdef P15
+/*Never claim for verifying the reachability of the state 
+n1_s5 from n1_s1 in LOSSY LINKS*/ 
 never
 {
 do
@@ -1741,7 +1976,9 @@ do
 od;
 }
 #endif
-#ifdef P16 
+#ifdef P16
+/*Never claim for verifying the reachability of the state 
+n1_s6 from n1_s1 in LOSSY LINKS*/ 
 never
 {
 do
@@ -1754,7 +1991,9 @@ do
 od;
 }
 #endif
-#ifdef P17 
+#ifdef P17
+/*Never claim for verifying the reachability of the state 
+n1_s7 from n1_s1 in LOSSY LINKS*/ 
 never
 {
 do
@@ -1767,7 +2006,9 @@ do
 od;
 }
 #endif
-#ifdef P18  
+#ifdef P18
+/*Never claim for verifying the reachability of the state 
+n1_s8 from n1_s1 in LOSSY LINKS*/  
 never
 {
 do
@@ -1780,7 +2021,9 @@ do
 od;
 }
 #endif
-#ifdef P19 
+#ifdef P19
+/*Never claim for verifying the reachability of the state 
+n1_s9 from n1_s1 in LOSSY LINKS*/ 
 never   
 {
 do
@@ -1793,7 +2036,9 @@ do
 od;
 }
 #endif
-#ifdef P20 
+#ifdef P20
+/*Never claim for verifying the reachability of the state 
+n1_s10 from n1_s1 in LOSSY LINKS*/ 
 never
 {
 do
@@ -1806,7 +2051,9 @@ do
 od;
 }
 #endif
-#ifdef P21  
+#ifdef P21
+/*Never claim for verifying the reachability of the state 
+n1_s11 from n1_s1 in LOSSY LINKS*/  
 never 
 {
 do
@@ -1819,7 +2066,10 @@ do
 od;
 }
 #endif
-#ifdef P22  
+/* Reachability verification at Node 2 for LOSSY Links*/
+#ifdef P22
+/*Never claim for verifying the reachability of the state 
+n2_s1 in LOSSY LINKS*/    
 never
 {
 do
@@ -1829,6 +2079,8 @@ od;
 }
 #endif
 #ifdef P23 
+/*Never claim for verifying the reachability of the state 
+n2_s2 from n2_s1 in LOSSY LINKS*/  
 never  
 {
 do
@@ -1842,6 +2094,8 @@ od;
 }
 #endif
 #ifdef P24  
+/*Never claim for verifying the reachability of the state 
+n2_s3 from n2_s1 in LOSSY LINKS*/ 
 never
 {
 do
@@ -1855,6 +2109,8 @@ od;
 }
 #endif
 #ifdef P25  
+/*Never claim for verifying the reachability of the state 
+n2_s4 from n2_s1 in LOSSY LINKS*/ 
 never
 {
 do
@@ -1868,6 +2124,8 @@ od;
 }
 #endif
 #ifdef P26 
+/*Never claim for verifying the reachability of the state 
+n2_s5 from n2_s1 in LOSSY LINKS*/ 
 never
 {
 do
@@ -1881,6 +2139,8 @@ od;
 }
 #endif
 #ifdef P27 
+/*Never claim for verifying the reachability of the state 
+n2_s6 from n2_s1 in LOSSY LINKS*/ 
 never
 {
 do
@@ -1894,6 +2154,8 @@ od;
 }
 #endif
 #ifdef P28 
+/*Never claim for verifying the reachability of the state 
+n2_s7 from n2_s1 in LOSSY LINKS*/ 
 never
 {
 do
@@ -1907,6 +2169,8 @@ od;
 }
 #endif
 #ifdef P29    
+/*Never claim for verifying the reachability of the state 
+n2_s8 from n2_s1 in LOSSY LINKS*/ 
 never
 {
 do
@@ -1920,6 +2184,8 @@ od;
 }
 #endif
 #ifdef P30 
+/*Never claim for verifying the reachability of the state 
+n2_s9 from n2_s1 in LOSSY LINKS*/ 
 never   
 {
 do
@@ -1933,6 +2199,8 @@ od;
 }
 #endif
 #ifdef P31 
+/*Never claim for verifying the reachability of the state 
+n2_s10 from n2_s1 in LOSSY LINKS*/ 
 never
 {
 do
@@ -1946,6 +2214,8 @@ od;
 }
 #endif
 #ifdef P32  
+/*Never claim for verifying the reachability of the state 
+n2_s11 from n2_s1 in LOSSY LINKS*/ 
 never 
 {
 do
@@ -1958,7 +2228,10 @@ do
 od;
 }
 #endif
+/* Reachability verification at Node 3 for LOSSY Links*/
 #ifdef P33  
+/*Never claim for verifying the reachability of the state 
+n3_s1  in LOSSY LINKS*/
 never
 {
 do
@@ -1968,6 +2241,8 @@ od;
 }
 #endif
 #ifdef P34 
+/*Never claim for verifying the reachability of the state 
+n3_s2 from n3_s1 in LOSSY LINKS*/
 never  
 {
 do
@@ -1981,6 +2256,8 @@ od;
 }
 #endif
 #ifdef P35  
+/*Never claim for verifying the reachability of the state 
+n3_s3 from n3_s1 in LOSSY LINKS*/
 never
 {
 do
@@ -1994,6 +2271,8 @@ od;
 }
 #endif
 #ifdef P36  
+/*Never claim for verifying the reachability of the state 
+n3_s4 from n3_s1 in LOSSY LINKS*/
 never
 {
 do
@@ -2007,6 +2286,8 @@ od;
 }
 #endif
 #ifdef P37 
+/*Never claim for verifying the reachability of the state 
+n3_s5 from n3_s1 in LOSSY LINKS*/
 never
 {
 do
@@ -2020,6 +2301,8 @@ od;
 }
 #endif
 #ifdef P38 
+/*Never claim for verifying the reachability of the state 
+n3_s6 from n3_s1 in LOSSY LINKS*/
 never
 {
 do
@@ -2033,6 +2316,8 @@ od;
 }
 #endif
 #ifdef P39 
+/*Never claim for verifying the reachability of the state 
+n3_s7 from n3_s1 in LOSSY LINKS*/
 never
 {
 do
@@ -2046,6 +2331,8 @@ od;
 }
 #endif
 #ifdef P40    
+/*Never claim for verifying the reachability of the state 
+n3_s8 from n3_s1 in LOSSY LINKS*/
 never
 {
 do
@@ -2059,6 +2346,8 @@ od;
 }
 #endif
 #ifdef P41 
+/*Never claim for verifying the reachability of the state 
+\n3_s9 from n3_s1 in LOSSY LINKS*/
 never   
 {
 do
@@ -2072,6 +2361,8 @@ od;
 }
 #endif
 #ifdef P42 
+/*Never claim for verifying the reachability of the state 
+n3_s10 from n3_s1 in LOSSY LINKS*/
 never
 {
 do
@@ -2085,6 +2376,8 @@ od;
 }
 #endif
 #ifdef P43  
+/*Never claim for verifying the reachability of the state 
+n3_s11 from n3_s1 in LOSSY LINKS*/
 never 
 {
 do
@@ -2098,6 +2391,7 @@ od;
 }
 #endif
 #endif
+/* Nver claim for defining the property of message collision */
 #ifdef MESSAGE_COLLISION
 never
 {
